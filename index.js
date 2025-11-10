@@ -37,6 +37,14 @@ async function run() {
 
         //===================== Recipes APIs =====================//
 
+        app.post('/recipes', async (req, res) => {
+            const newRecipe = req.body;
+            newRecipe.rating = parseFloat(newRecipe.rating) || 0;
+            newRecipe.createdAt = new Date();
+            const result = await recipesCollection.insertOne(newRecipe);
+            res.send(result);
+        })
+
         app.get('/recipes', async (req, res) => {
             const email = req.query.email;
             const featured = req.query.featured === "true";
@@ -64,13 +72,6 @@ async function run() {
             res.send(result);
         })
 
-        app.post('/recipes', async (req, res) => {
-            const newRecipe = req.body;
-            newRecipe.rating = parseFloat(newRecipe.rating) || 0;
-            newRecipe.createdAt = new Date();
-            const result = await recipesCollection.insertOne(newRecipe);
-            res.send(result);
-        })
 
         app.patch('/recipes/:id', async (req, res) => {
             const recipeId = req.params.id;
