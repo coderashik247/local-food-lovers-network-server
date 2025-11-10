@@ -31,67 +31,74 @@ async function run() {
         await client.connect();
 
         const db = client.db('localFoodDB');
+        const recipesCollection = db.collection('recipes');
         const reviewsCollection = db.collection('reviews');
         const favoritesCollection = db.collection('favorites');
 
-        // Get all reviews (Public) or filter by email
-        app.get('/reviews', async(req, res) =>{
+        app.get('/recipes', async (req, res) => {
             const email = req.query.email;
-            const query ={}
-            if(email) {
+            const featured = req.query.featured === "true";
+            const query = {};
+            if (email) {
                 query.reviewer_email = email;
             }
-            const cursor = reviewsCollection.find(query);
+            let cursor;
+            if (featured) {
+                cursor = recipesCollection
+                    .find({})
+                    .sort({ rating: -1 })
+                    .limit(6);
+            } else {
+                cursor = recipesCollection.find(query);
+            }
             const result = await cursor.toArray();
             res.send(result);
         })
 
-        //Get one review by ID
-        app.get('/reviews/:id', async(req, res)  =>{
-            const reviewId = req.params.id;
-            const query = {_id: new ObjectId(reviewId)};
-            const result = await reviewsCollection.findOne(query);
+        app.get('/recipes/:id', async (req, res) => {
+            const recipeId = req.params.id;
+            const query = { _id: new ObjectId(recipeId) };
+            const result = await recipesCollection.findOne(query);
             res.send(result);
         })
 
-        // Add new review (Protected korte hobe)
-        app.post('/reviews', async(req, res) =>{
-            const newReviews = req.body;
-            const result = await reviewsCollection.insertOne(newReviews);
+        app.post('/recipes', async (req, res) => {
+            const newRecipe = req.body;
+            newRecipe.rating = parseFloat(newRecipe.rating) || 0;
+            newRecipe.createdAt = new Date();
+            const result = await recipesCollection.insertOne(newRecipe);
             res.send(result);
         })
 
-        // Update review
-        app.patch('/reviews/:id', async(req, res) =>{
-            const reviewId = req.params.id;
+        app.patch('/recipes/:id', async (req, res) => {
+            const recipeId = req.params.id;
             const updated = req.body;
-            const query = {_id: new ObjectId(id)}
-            const update = {
-                $set:updated
-            }
+            const query = { _id: new ObjectId(recipeId) };
+            const updateDoc = { $set: updated };
+            const result = await recipesCollection.updateOne(query, updateDoc);
             res.send(result);
         })
 
-        // Delete review (Protected korte hobe)
-        app.delete('/reviews/:id', async(req, res) =>{
-            const reviewId = req.params.id;
-            const query = {_id: new ObjectId(reviewId)};
-            const result = await reviewsCollection.deleteOne(query);
+        app.delete('/recipes/:id', async (req, res) => {
+            const recipeId = req.params.id;
+            const query = { _id: new ObjectId(recipeId) };
+            const result = await recipesCollection.deleteOne(query);
             res.send(result);
         })
+
 
         // Favorites (Protected korte hobe)
-        app.post('/favorites', async(req, res) =>{
+        app.post('/favorites', async (req, res) => {
             const favorites = req.body;
             const result = await favoritesCollection.insertOne(favorites);
             res.send(result);
         });
 
         // Favorites get
-        app.get('/favorites', async(req, res) =>{
+        app.get('/favorites', async (req, res) => {
             const email = req.query.email;
             const query = {};
-            if(email){
+            if (email) {
                 query.user_email = email;
             }
             const cursor = favoritesCollection.find(query);
@@ -100,9 +107,9 @@ async function run() {
         })
 
         // Favorites delete
-        app.delete('/favorites/:id', async(req, res) =>{
+        app.delete('/favorites/:id', async (req, res) => {
             const favoritesId = req.params.id;
-            const query = {_id: new ObjectId(favoritesId)}
+            const query = { _id: new ObjectId(favoritesId) }
             const result = await favoritesCollection.deleteOne(query);
             res.send(result);
         })
