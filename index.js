@@ -31,7 +31,7 @@ async function run() {
         await client.connect();
 
         const db = client.db('localFoodDB');
-        const reviewsCollection = db.collection('reviews'); // Only reviews collection
+        const reviewsCollection = db.collection('reviews');
 
         //===================== reviews APIs =====================//
 
@@ -105,7 +105,7 @@ async function run() {
             }
         });
 
-        // Only Like (No Unlike) - Fixed Route
+        // Only Like
         app.patch('/reviews-likes/:id', async (req, res) => {
             try {
                 const recipeId = req.params.id;
