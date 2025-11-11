@@ -79,11 +79,22 @@ async function run() {
 
         // get single recipe
         app.get('/recipes/:id', async (req, res) => {
-            const recipeId = req.params.id;
-            const query = { _id: new ObjectId(recipeId) };
-            const result = await recipesCollection.findOne(query);
-            res.send(result);
-        })
+            try {
+                const recipeId = req.params.id;
+                const query = { _id: new ObjectId(recipeId) };
+                const result = await recipesCollection.findOne(query);
+
+                if (!result) {
+                    return res.status(404).send({ message: "Recipe not found" });
+                }
+
+                res.send(result);
+            } catch (error) {
+                console.error("Error fetching recipe:", error);
+                res.status(500).send({ message: "Failed to fetch recipe" });
+            }
+        });
+
 
         // get recipes by reviewer email
         app.get('/recipes/email/:email', async (req, res) => {
@@ -134,7 +145,7 @@ async function run() {
             const result = await recipesCollection.updateOne(query, updateDoc);
             res.send(result);
         })
-        
+
         // delete recipe
         app.delete('/recipes/:id', async (req, res) => {
             const recipeId = req.params.id;
