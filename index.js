@@ -40,15 +40,17 @@ async function run() {
         app.post('/recipes', async (req, res) => {
             const newRecipe = req.body;
             newRecipe.rating = parseFloat(newRecipe.rating) || 0;
+            newRecipe.likes = parseInt(newRecipe.likes) || 0;
             newRecipe.createdAt = new Date();
             const result = await recipesCollection.insertOne(newRecipe);
             res.send(result);
         })
+        // get all recipes
         app.get('/all-recipes', async (req, res) => {
             try {
                 const result = await recipesCollection
                     .find({})
-                    .sort({ createdAt: -1 }) // newest first
+                    .sort({ createdAt: -1 })
                     .toArray();
 
                 res.send(result);
@@ -58,7 +60,24 @@ async function run() {
             }
         });
 
+        //sort by likes
 
+        app.get('/all-recipes/like', async (req, res) => {
+            try {
+                const result = await recipesCollection
+                    .find({})
+                    .sort({ likes: -1, createdAt: -1 })
+                    .limit(6)
+                    .toArray();
+
+                res.send(result);
+            } catch (error) {
+                res.status(500).send({ message: "Failed to fetch recipes" });
+            }
+        });
+
+
+        // get recipes by email and featured
         app.get('/recipes', async (req, res) => {
             const email = req.query.email;
             const featured = req.query.featured === "true";
@@ -79,6 +98,7 @@ async function run() {
             res.send(result);
         })
 
+        // get single recipe
         app.get('/recipes/:id', async (req, res) => {
             const recipeId = req.params.id;
             const query = { _id: new ObjectId(recipeId) };
@@ -86,7 +106,36 @@ async function run() {
             res.send(result);
         })
 
+        // update only likes                   
+        app.patch('/recipes-likes/:id', async (req, res) => {
+            try {
+                const recipeId = req.params.id;
+                const { likes } = req.body;
 
+                if (typeof likes !== 'number' || likes < 0) {
+                    return res.status(400).send({ error: "Invalid 'likes' value" });
+                }
+
+                const query = { _id: new ObjectId(recipeId) };
+                const updateDoc = { $set: { likes } };
+                const result = await recipesCollection.updateOne(query, updateDoc);
+
+                if (result.modifiedCount === 0) {
+                    return res.status(404).send({ error: "Recipe not found or not updated" });
+                }
+
+                const updatedRecipe = await recipesCollection.findOne(query);
+                res.send(updatedRecipe);
+            } catch (error) {
+                console.error("Error updating like count:", error);
+                res.status(500).send({ error: 'Failed to update like count' });
+            }
+        });
+
+
+
+
+        // update recipe
         app.patch('/recipes/:id', async (req, res) => {
             const recipeId = req.params.id;
             const updated = req.body;
@@ -95,7 +144,7 @@ async function run() {
             const result = await recipesCollection.updateOne(query, updateDoc);
             res.send(result);
         })
-
+        // delete recipe
         app.delete('/recipes/:id', async (req, res) => {
             const recipeId = req.params.id;
             const query = { _id: new ObjectId(recipeId) };
