@@ -44,6 +44,20 @@ async function run() {
             const result = await recipesCollection.insertOne(newRecipe);
             res.send(result);
         })
+        app.get('/all-recipes', async (req, res) => {
+            try {
+                const result = await recipesCollection
+                    .find({})
+                    .sort({ createdAt: -1 }) // newest first
+                    .toArray();
+
+                res.send(result);
+            } catch (error) {
+                console.error("Error fetching recipes:", error);
+                res.status(500).send({ message: "Failed to fetch recipes" });
+            }
+        });
+
 
         app.get('/recipes', async (req, res) => {
             const email = req.query.email;
