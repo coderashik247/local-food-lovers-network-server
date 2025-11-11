@@ -45,6 +45,7 @@ async function run() {
             const result = await recipesCollection.insertOne(newRecipe);
             res.send(result);
         })
+
         // get all recipes
         app.get('/all-recipes', async (req, res) => {
             try {
@@ -76,28 +77,6 @@ async function run() {
             }
         });
 
-
-        // get recipes by email and featured
-        app.get('/recipes', async (req, res) => {
-            const email = req.query.email;
-            const featured = req.query.featured === "true";
-            const query = {};
-            if (email) {
-                query.reviewer_email = email;
-            }
-            let cursor;
-            if (featured) {
-                cursor = recipesCollection
-                    .find({})
-                    .sort({ rating: -1 })
-                    .limit(6);
-            } else {
-                cursor = recipesCollection.find(query);
-            }
-            const result = await cursor.toArray();
-            res.send(result);
-        })
-
         // get single recipe
         app.get('/recipes/:id', async (req, res) => {
             const recipeId = req.params.id;
@@ -105,6 +84,20 @@ async function run() {
             const result = await recipesCollection.findOne(query);
             res.send(result);
         })
+
+        // get recipes by reviewer email
+        app.get('/recipes/email/:email', async (req, res) => {
+            try {
+                const email = req.params.email;
+                const query = { reviewer_email: email };
+                const result = await recipesCollection.find(query).toArray();
+                res.send(result);
+            } catch (error) {
+                console.error("Error fetching recipes by email:", error);
+                res.status(500).send({ message: "Failed to fetch recipes by email" });
+            }
+        });
+
 
         // update only likes                   
         app.patch('/recipes-likes/:id', async (req, res) => {
@@ -132,9 +125,6 @@ async function run() {
             }
         });
 
-
-
-
         // update recipe
         app.patch('/recipes/:id', async (req, res) => {
             const recipeId = req.params.id;
@@ -144,6 +134,7 @@ async function run() {
             const result = await recipesCollection.updateOne(query, updateDoc);
             res.send(result);
         })
+        
         // delete recipe
         app.delete('/recipes/:id', async (req, res) => {
             const recipeId = req.params.id;
