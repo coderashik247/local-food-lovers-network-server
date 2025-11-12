@@ -33,7 +33,7 @@ async function run() {
         const db = client.db('localFoodDB');
         const reviewsCollection = db.collection('reviews');
 
-        //===================== reviews APIs =====================//
+        //------------- reviews APIs ---------------------//
 
         // Add new recipe
         app.post('/reviews', async (req, res) => {
@@ -45,13 +45,87 @@ async function run() {
             res.send(result);
         });
 
-        // Get all reviews (latest first)
-        app.get('/all-reviews', async (req, res) => {
+        app.get("/all-reviews", async (req, res) => {
             try {
+                const search = req.query.search || "";
+
+                const query = search
+                    ? { foodName: { $regex: search, $options: "i" } }
+                    : {};
+
                 const result = await reviewsCollection
-                    .find({})
+                    .find(query)
                     .sort({ createdAt: -1 })
                     .toArray();
+
+                res.send(result);
+            } catch (error) {
+                console.error("Error fetching reviews:", error);
+                res.status(500).send({ message: "Failed to fetch reviews" });
+            }
+        });
+
+        // add bookmark 
+        app.patch("/reviews/:id/bookmark", async (req, res) => {
+            const reviewId = req.params.id;
+            const { userEmail } = req.body;
+
+            try {
+                const review = await reviewsCollection.findOne({ _id: new ObjectId(reviewId) });
+
+                if (!review) {
+                    return res.status(404).send({ message: "Review not found" });
+                }
+
+                // Check if user already bookmarked it
+                const alreadyBookmarked = review.bookmarkedBy?.includes(userEmail);
+
+                const update = alreadyBookmarked
+                    ? { $pull: { bookmarkedBy: userEmail } }
+                    : { $addToSet: { bookmarkedBy: userEmail } };
+
+                await reviewsCollection.updateOne(
+                    { _id: new ObjectId(reviewId) },
+                    update
+                );
+
+                res.send({ success: true, bookmarked: !alreadyBookmarked });
+            } catch (err) {
+                console.error("Bookmark toggle failed:", err);
+                res.status(500).send({ message: "Bookmark update failed" });
+            }
+        });
+
+
+        // get bookmarked reviews
+        app.get("/reviews/bookmarked/:email", async (req, res) => {
+            const userEmail = req.params.email;
+
+            try {
+                const bookmarkedReviews = await reviewsCollection
+                    .find({ bookmarkedBy: userEmail })
+                    .toArray();
+                res.send(bookmarkedReviews);
+            } catch (err) {
+                console.error("Fetching bookmarked reviews failed:", err);
+                res.status(500).send({ message: "Failed to fetch bookmarked reviews" });
+            }
+        });
+
+
+        //  Server-side search route
+        app.get("/all-reviews", async (req, res) => {
+            try {
+                const search = req.query.search || "";
+                const query = search
+                    ? { userName: { $regex: search, $options: "i" } }
+                    : {};
+
+                const result = await reviewsCollection
+                    .find(query)
+                    .sort({ createdAt: -1 })
+                    .toArray();
+
                 res.send(result);
             } catch (error) {
                 console.error("Error fetching reviews:", error);
@@ -74,6 +148,7 @@ async function run() {
             }
         });
 
+
         // Get single recipe by ID
         app.get('/reviews/:id', async (req, res) => {
             try {
@@ -92,6 +167,7 @@ async function run() {
             }
         });
 
+
         // Get reviews by reviewer email
         app.get('/reviews/email/:email', async (req, res) => {
             try {
@@ -104,6 +180,7 @@ async function run() {
                 res.status(500).send({ message: "Failed to fetch reviews by email" });
             }
         });
+
 
         // Only Like
         app.patch('/reviews-likes/:id', async (req, res) => {
@@ -146,6 +223,7 @@ async function run() {
             }
         });
 
+
         // Update full recipe
         app.patch('/reviews/:id', async (req, res) => {
             try {
@@ -165,6 +243,7 @@ async function run() {
                 res.status(500).send({ message: "Failed to update recipe" });
             }
         });
+
 
         // Delete recipe
         app.delete('/reviews/:id', async (req, res) => {
