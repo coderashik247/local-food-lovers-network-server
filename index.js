@@ -7,8 +7,16 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
 app.use(express.json());
+
+// CORS middleware
+app.use(cors({
+    origin: ['https://joyful-cranachan-7c1d43.netlify.app'],
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+}));
+
 
 // MongoDB Connection URI
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.fj5vaxe.mongodb.net/?appName=Cluster0`;
@@ -28,7 +36,7 @@ app.get('/', (req, res) => {
 
 async function run() {
     try {
-        await client.connect();
+        // await client.connect();
 
         const db = client.db('localFoodDB');
         const reviewsCollection = db.collection('reviews');
@@ -264,7 +272,7 @@ async function run() {
         });
 
         // MongoDB Ping Test
-        await client.db("admin").command({ ping: 1 });
+        //await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
 
     } catch (error) {
